@@ -1,21 +1,25 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:squadron/squadron.dart';
 
-import 'mandelbrot.dart';
+import 'worker/mandelbrot.dart';
 
 class MandleView extends StatefulWidget {
   final int width;
   final int height;
   final Offset upperLeftCoord;
   final double renderWidth;
+  final List<MandelbrotWorker> workers;
   const MandleView({
+    Key? key,
     required this.width,
     required this.height,
     required this.upperLeftCoord,
     required this.renderWidth,
-    Key? key,
+    required this.workers,
   }) : super(key: key);
 
   @override
@@ -23,48 +27,107 @@ class MandleView extends StatefulWidget {
 }
 
 class _MandleViewState extends State<MandleView> {
-  Uint32List? imageBuffer;
-  final mandel = Mandelbrot();
   FrameInfo? frameToDisplay;
+
+  CancellationToken? _token;
 
   @override
   void initState() {
-    imageBuffer = Uint32List(widget.width * widget.height);
-    renderMandel();
-
     super.initState();
+    _renderMandel();
   }
 
   @override
   void didUpdateWidget(covariant MandleView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.width != oldWidget.width || widget.height != oldWidget.height) {
-      /// Window size changed so we have to adapt our image buffer size
-      imageBuffer = Uint32List(widget.width * widget.height);
-    }
-    renderMandel();
+    _renderMandel();
   }
 
-  void renderMandel() {
+  void _renderMandel() async {
+    _token?.cancel();
+    final token = CancellationToken(DateTime.now().toIso8601String());
+    _token = token;
+
+    final workers = widget.workers;
+
+    final sw = Stopwatch();
+    sw.start();
+
     final double aspect = widget.width / widget.height;
 
-    mandel.renderData(
-        data: imageBuffer!,
-        xMin: widget.upperLeftCoord.dx,
-        xMax: widget.upperLeftCoord.dx + widget.renderWidth,
-        yMin: widget.upperLeftCoord.dy,
-        yMax: widget.upperLeftCoord.dy + widget.renderWidth / aspect,
-        bitmapWidth: widget.width,
-        bitMapHeight: widget.height);
+    final xMin = widget.upperLeftCoord.dx;
+    final xMax = widget.upperLeftCoord.dx + widget.renderWidth;
 
-    ImmutableBuffer.fromUint8List(imageBuffer!.buffer.asUint8List())
-        .then((value) => ImageDescriptor.raw(value,
-                width: widget.width,
-                height: widget.height,
-                pixelFormat: PixelFormat.bgra8888)
-            .instantiateCodec()
-            .then((codec) => codec.getNextFrame()))
-        .then((frame) => setState(() => frameToDisplay = frame));
+    final ySpan = (widget.renderWidth / aspect) / workers.length;
+
+    var yMin = widget.upperLeftCoord.dy;
+    var yMax = yMin + ySpan;
+
+    final wSpan = widget.width;
+    var hSpan = widget.height ~/ workers.length;
+
+    // Have the first workers compute each partial bitmap.
+    // The last worker will be assigned a different batch.
+    final computations = <Future<ByteBuffer>>[];
+    for (var worker in workers.take(workers.length - 1)) {
+      computations.add(worker.renderData(
+        xMin,
+        xMax,
+        yMin,
+        yMax,
+        wSpan,
+        hSpan, /*token*/ // to be reactivated when squadron_builder handles cancellation tokens
+      ));
+      yMin = yMax;
+      yMax = yMin + ySpan;
+    }
+
+    // The last batch must include the pixels at the bottom of the widget, which
+    // may have been lost due to rounding errors depending on the number of workers.
+    // As a result, the last partial bitmap may be slightly deformed, I need to work
+    // out the maths to adjust yMax accordingly.
+    hSpan += widget.height - hSpan * workers.length;
+    computations.add(workers.last.renderData(
+      xMin,
+      xMax,
+      yMin,
+      yMax,
+      wSpan,
+      hSpan, /*token*/ // to be reactivated when squadron_builder handles cancellation tokens
+    ));
+
+    // Wait for computations to complete...
+    try {
+      final parts =
+          (await Future.wait(computations)).map((b) => b.asUint8List());
+
+      _token = null;
+
+      // Consolidate data...
+      final size = parts.map((l) => l.length).reduce((s, l) => s + l);
+      final pixels = Uint8List(size);
+      int offset = 0;
+      for (var bytes in parts) {
+        final end = offset + bytes.length;
+        pixels.setRange(offset, end, bytes);
+        offset = end;
+      }
+
+      // Display!
+      final value = await ImmutableBuffer.fromUint8List(pixels);
+      final codec = await ImageDescriptor.raw(value,
+              width: widget.width,
+              height: widget.height,
+              pixelFormat: PixelFormat.bgra8888)
+          .instantiateCodec();
+      final frame = await codec.getNextFrame();
+      setState(() => frameToDisplay = frame);
+    } catch (ex) {
+      print(ex.runtimeType);
+    }
+
+    sw.stop();
+    print(sw.elapsed);
   }
 
   @override

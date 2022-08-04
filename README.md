@@ -1,8 +1,19 @@
-# flutter_mandel
+## Flutter-Mandel + Squadron
 
-Very simple Mandel set grafics generator. Ported from https://github.com/mckoss/dart-mandelbrot
+Forked from https://github.com/escamoteur/flutter_mandel which was ported from https://github.com/mckoss/dart-mandelbrot.
 
-next steps will be useing multiple isolates to speed up rendering
+Then augmented with https://github.com/d-markey/squadron
 
+1. First, generate Squadron cross-platform workers with:
 
-![image](https://user-images.githubusercontent.com/16635729/164984565-bcc865e8-d1ec-4dda-984b-d2325d7aacf0.png)
+```
+dart run build_runner build
+```
+
+2. Then, compile Squadron Web worker to JavaScript with:
+
+```
+dart compile js .\lib\worker\mandelbrot.web.g.dart -o .\web\worker\mandelbrot.web.g.dart.js -m
+```
+
+3. Finally, run on desktop, mobile, and Web and start playing with workers!

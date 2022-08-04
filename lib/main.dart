@@ -1,10 +1,13 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_mandel/worker/mandelbrot.dart';
+import 'package:squadron/squadron.dart';
 
 import 'mandel_view.dart';
 
 void main() {
+  Squadron.setId('Mandelbrot');
+  Squadron.setLogger(ConsoleSquadronLogger());
+  Squadron.logLevel = SquadronLogLevel.all;
   runApp(const MyApp());
 }
 
@@ -15,21 +18,17 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-        title: 'Flutter Demo',
-        theme: ThemeData(
-          primarySwatch: Colors.blue,
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: Scaffold(
+        appBar: AppBar(
+          title: const Text('Mandel Demo'),
         ),
-        home: Scaffold(
-          appBar: AppBar(
-            title: const Text('Mandel Demo'),
-          ),
-          body: const MandelExplorer(),
-        )
-        //   onPressed: _incrementCounter,
-        //   tooltip: 'Increment',
-        //   child: const Icon(Icons.add),
-        // ), // This trailing comma makes auto-formatting nicer for build methods.
-        );
+        body: const MandelExplorer(),
+      ),
+    );
   }
 }
 
@@ -45,9 +44,37 @@ class MandelExplorer extends StatefulWidget {
 class _MandelExplorerState extends State<MandelExplorer> {
   Offset upperLeft = const Offset(-2.05, -1.1);
   double renderWidth = 3.0;
+  List<MandelbrotWorker> workers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    for (var i = 0; i < 1; i++) {
+      final w = MandelbrotWorker();
+      workers.add(w);
+      w.start();
+    }
+  }
+
+  void _removeLastWorker() {
+    if (workers.length > 1) {
+      final w = workers.removeLast();
+      w.stop();
+      setState(() {});
+    }
+  }
+
+  Future _addOneWorker() async {
+    final w = MandelbrotWorker();
+    await w.start();
+    workers.add(w);
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
+    final whiteButton = ButtonStyle(
+        backgroundColor: MaterialStateProperty.all<Color>(Colors.white));
     return Stack(
       children: [
         LayoutBuilder(
@@ -57,9 +84,27 @@ class _MandelExplorerState extends State<MandelExplorer> {
               height: constraints.maxHeight.toInt(),
               upperLeftCoord: upperLeft,
               renderWidth: renderWidth,
+              workers: workers,
             );
           },
         ),
+        Positioned(
+            left: 20,
+            top: 20,
+            child: Row(children: [
+              TextButton(
+                  onPressed: _removeLastWorker,
+                  style: whiteButton,
+                  child: const Text("-1")),
+              Text(
+                workers.length.toString(),
+                style: const TextStyle(backgroundColor: Colors.white),
+              ),
+              TextButton(
+                  onPressed: _addOneWorker,
+                  style: whiteButton,
+                  child: const Text("+1")),
+            ])),
         Positioned(
             right: 60,
             bottom: 100,
