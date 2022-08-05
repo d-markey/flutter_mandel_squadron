@@ -123,11 +123,11 @@ class _MandleViewState extends State<MandleView> {
       final frame = await codec.getNextFrame();
       setState(() => frameToDisplay = frame);
     } catch (ex) {
-      print(ex.runtimeType);
+      Squadron.info('Error ${ex.runtimeType}');
     }
 
     sw.stop();
-    print(sw.elapsed);
+    Squadron.info('Render completed in ${sw.elapsed}');
   }
 
   @override
