@@ -119,42 +119,38 @@ class Mandelbrot extends WorkerService {
     double xMin,
     double xMax,
     double yMin,
-    double yMax,
-    int bitmapWidth,
-    int bitmapHeight,
-    /*[CancellationToken? token]*/ // to be reactivated when squadron_builder handles cancellation tokens
-  ) async {
-    CancellationToken?
-        token; // to be removed when squadron_builder handles cancellation tokens
-
+    double yMax, {
+    CancellationToken? clToken,
+    required int bitmapWidth,
+    required int bitmapHeight,
+  }) async {
     final data = Uint32List(bitmapHeight * bitmapWidth);
 
-    await Future.delayed(Duration.zero);
-    if (token?.cancelled ?? false) {
-      Squadron.info('Task already cancelled');
-    } else {
-      // Per-pixel step values
-      final dx = (xMax - xMin) / bitmapWidth;
-      final dy = (yMax - yMin) / bitmapHeight;
+    // Per-pixel step values
+    final dx = (xMax - xMin) / bitmapWidth;
+    final dy = (yMax - yMin) / bitmapHeight;
 
-      var y = yMin + dy / 2;
-      var idx = 0;
-      for (int iy = 0; iy < bitmapHeight; iy++) {
-        var x = xMin + dx / 2;
-        for (int ix = 0; ix < bitmapWidth; ix++) {
-          final iters = iterations(x, y);
-          data[idx++] = colorFromLevel(iters);
-          x += dx;
+    var y = yMin + dy / 2;
+    var idx = 0;
+    for (int iy = 0; iy < bitmapHeight; iy++) {
+      if (iy % 10 == 0) {
+        // Yield every once in a while to allow for cancellation notifications
+        // to pass through.
+        await Future.delayed(Duration.zero);
+        if (clToken?.cancelled ?? false) {
+          Squadron.info(
+              'Task cancelled during computation: iy = $iy / $bitmapHeight');
+          break;
         }
-        if (iy % 10 == 9) {
-          await Future.delayed(Duration.zero);
-          if (token?.cancelled ?? false) {
-            Squadron.info('Task cancelled during computation');
-            break;
-          }
-        }
-        y += dy;
       }
+
+      var x = xMin + dx / 2;
+      for (int ix = 0; ix < bitmapWidth; ix++) {
+        final iters = iterations(x, y);
+        data[idx++] = colorFromLevel(iters);
+        x += dx;
+      }
+      y += dy;
     }
 
     return data.buffer;

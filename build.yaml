@@ -17,7 +17,5 @@ builders:
     build_extensions: { '.dart': [ '.worker.g.dart', '.vm.g.dart', '.web.g.dart', '.stub.g.dart', '.activator.g.dart' ] }
     # Will automatically run on any package that depends on it
     auto_apply: dependents
-    # Generate to a hidden cache dir
+    # Generate to source dir
     build_to: source
-    # Combine the parts from each builder into one part file.
-    applies_builders: ["source_gen|combining_builder"]

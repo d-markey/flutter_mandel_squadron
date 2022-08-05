@@ -369,20 +369,16 @@ packages:
   squadron:
     dependency: "direct main"
     description:
-      path: "."
-      ref: HEAD
-      resolved-ref: dc28becee57d8059e92f12348b74519eb3992956
-      url: "https://github.com/d-markey/squadron.git"
-    source: git
+      path: "../squadron"
+      relative: true
+    source: path
     version: "4.3.0"
   squadron_builder:
     dependency: "direct dev"
     description:
-      path: "."
-      ref: HEAD
-      resolved-ref: "54319518c65d56aac79d254b0d3de38e8bdbbd49"
-      url: "https://github.com/d-markey/squadron_builder.git"
-    source: git
+      path: "../squadron_builder"
+      relative: true
+    source: path
     version: "0.5.0"
   stack_trace:
     dependency: transitive

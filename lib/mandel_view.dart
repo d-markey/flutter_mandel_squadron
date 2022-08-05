@@ -12,7 +12,7 @@ class MandleView extends StatefulWidget {
   final int height;
   final Offset upperLeftCoord;
   final double renderWidth;
-  final List<MandelbrotWorker> workers;
+  final List<Mandelbrot> workers;
   const MandleView({
     Key? key,
     required this.width,
@@ -44,11 +44,16 @@ class _MandleViewState extends State<MandleView> {
   }
 
   void _renderMandel() async {
-    _token?.cancel();
+    if (_token != null) {
+      Squadron.info('Cancel pending rendering');
+      _token?.cancel();
+    }
     final token = CancellationToken(DateTime.now().toIso8601String());
     _token = token;
 
     final workers = widget.workers;
+
+    Squadron.info('Start rendering');
 
     final sw = Stopwatch();
     sw.start();
@@ -70,14 +75,20 @@ class _MandleViewState extends State<MandleView> {
     // The last worker will be assigned a different batch.
     final computations = <Future<ByteBuffer>>[];
     for (var worker in workers.take(workers.length - 1)) {
-      computations.add(worker.renderData(
+      computations.add(worker
+          .renderData(
         xMin,
         xMax,
         yMin,
         yMax,
-        wSpan,
-        hSpan, /*token*/ // to be reactivated when squadron_builder handles cancellation tokens
-      ));
+        clToken: token,
+        bitmapWidth: wSpan,
+        bitmapHeight: hSpan,
+      )
+          .whenComplete(() {
+        Squadron.info(
+            '   Worker #${worker is MandelbrotWorker ? worker.workerId : 'single-thread'} completed in ${sw.elapsed}');
+      }));
       yMin = yMax;
       yMax = yMin + ySpan;
     }
@@ -87,14 +98,21 @@ class _MandleViewState extends State<MandleView> {
     // As a result, the last partial bitmap may be slightly deformed, I need to work
     // out the maths to adjust yMax accordingly.
     hSpan += widget.height - hSpan * workers.length;
-    computations.add(workers.last.renderData(
+    final worker = workers.last;
+    computations.add(worker
+        .renderData(
       xMin,
       xMax,
       yMin,
       yMax,
-      wSpan,
-      hSpan, /*token*/ // to be reactivated when squadron_builder handles cancellation tokens
-    ));
+      clToken: token,
+      bitmapWidth: wSpan,
+      bitmapHeight: hSpan,
+    )
+        .whenComplete(() {
+      Squadron.info(
+          '   Worker #${worker is MandelbrotWorker ? worker.workerId : 'single-thread'} completed in ${sw.elapsed}');
+    }));
 
     // Wait for computations to complete...
     try {

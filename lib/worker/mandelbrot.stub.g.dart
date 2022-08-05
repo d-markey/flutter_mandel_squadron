@@ -4,4 +4,4 @@
 // SquadronServiceGenerator
 // **************************************************************************
 
-dynamic getMandelbrotActivator()  => throw UnimplementedError();
+dynamic getMandelbrotActivator() => throw UnimplementedError();

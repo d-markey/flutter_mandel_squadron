@@ -14,7 +14,6 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -44,21 +43,23 @@ class MandelExplorer extends StatefulWidget {
 class _MandelExplorerState extends State<MandelExplorer> {
   Offset upperLeft = const Offset(-2.05, -1.1);
   double renderWidth = 3.0;
-  List<MandelbrotWorker> workers = [];
+
+  // MandelbrotWorker implement Mandelbrot :)
+  // When there is no worker thread available, _singleThreaded will be used and
+  // computation will take place in the main event loop.
+  // Otherwise, _multiThreaded is used and computation will take place in the
+  // worker event loops.
+  final List<MandelbrotWorker> _multiThreaded = [];
+  final List<Mandelbrot> _singleThreaded = [Mandelbrot()];
 
   @override
   void initState() {
     super.initState();
-    for (var i = 0; i < 1; i++) {
-      final w = MandelbrotWorker();
-      workers.add(w);
-      w.start();
-    }
   }
 
   void _removeLastWorker() {
-    if (workers.length > 1) {
-      final w = workers.removeLast();
+    if (_multiThreaded.isNotEmpty) {
+      final w = _multiThreaded.removeLast();
       w.stop();
       setState(() {});
     }
@@ -67,14 +68,15 @@ class _MandelExplorerState extends State<MandelExplorer> {
   Future _addOneWorker() async {
     final w = MandelbrotWorker();
     await w.start();
-    workers.add(w);
+    _multiThreaded.add(w);
     setState(() {});
   }
 
+  static final whiteButton = ButtonStyle(
+      backgroundColor: MaterialStateProperty.all<Color>(Colors.white));
+
   @override
   Widget build(BuildContext context) {
-    final whiteButton = ButtonStyle(
-        backgroundColor: MaterialStateProperty.all<Color>(Colors.white));
     return Stack(
       children: [
         LayoutBuilder(
@@ -84,7 +86,8 @@ class _MandelExplorerState extends State<MandelExplorer> {
               height: constraints.maxHeight.toInt(),
               upperLeftCoord: upperLeft,
               renderWidth: renderWidth,
-              workers: workers,
+              workers:
+                  _multiThreaded.isEmpty ? _singleThreaded : _multiThreaded,
             );
           },
         ),
@@ -97,7 +100,7 @@ class _MandelExplorerState extends State<MandelExplorer> {
                   style: whiteButton,
                   child: const Text("-1")),
               Text(
-                workers.length.toString(),
+                _multiThreaded.length.toString(),
                 style: const TextStyle(backgroundColor: Colors.white),
               ),
               TextButton(
@@ -141,7 +144,6 @@ class _MandelExplorerState extends State<MandelExplorer> {
               }),
               child: const Icon(Icons.arrow_left),
             )),
-        // floatingActionButton: FloatingActionButton(
         Positioned(
             right: 60,
             bottom: 20,
@@ -168,7 +170,6 @@ class _MandelExplorerState extends State<MandelExplorer> {
               }),
               child: const Icon(Icons.zoom_in),
             )),
-        // floatingActionButton: FloatingActionButton(
         Positioned(
             right: 35,
             bottom: 150,
