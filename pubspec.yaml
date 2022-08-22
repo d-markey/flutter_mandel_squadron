@@ -27,7 +27,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
-  squadron: ^4.1.0
+  squadron: ^4.3.0
   flutter:
     sdk: flutter
 
@@ -38,7 +38,7 @@ dependencies:
 
 dev_dependencies:
   build_runner: ^2.1.10
-  squadron_builder: ^0.0.1
+  squadron_builder: ^0.7.1
   flutter_test:
     sdk: flutter
 
@@ -51,14 +51,6 @@ dev_dependencies:
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
-
-dependency_overrides:
-  squadron:
-    # git: https://github.com/d-markey/squadron.git
-    path: ../squadron
-  squadron_builder:
-    # git: https://github.com/d-markey/squadron_builder.git
-    path: ../squadron_builder
 
 # The following section is specific to Flutter.
 flutter:
