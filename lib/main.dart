@@ -41,8 +41,8 @@ class MandelExplorer extends StatefulWidget {
 }
 
 class _MandelExplorerState extends State<MandelExplorer> {
-  Offset upperLeft = const Offset(-2.05, -1.1);
-  double renderWidth = 3.0;
+  Offset renderCenter = const Offset(-0.75, 0);
+  double renderWidth = 3.5;
 
   // MandelbrotWorker implement Mandelbrot :)
   // When there is no worker thread available, _singleThreaded will be used and
@@ -84,7 +84,7 @@ class _MandelExplorerState extends State<MandelExplorer> {
             return MandleView(
               width: constraints.maxWidth.toInt(),
               height: constraints.maxHeight.toInt(),
-              upperLeftCoord: upperLeft,
+              centerCoord: renderCenter,
               renderWidth: renderWidth,
               workers:
                   _multiThreaded.isEmpty ? _singleThreaded : _multiThreaded,
@@ -115,7 +115,7 @@ class _MandelExplorerState extends State<MandelExplorer> {
               mini: true,
               onPressed: (() {
                 setState(() {
-                  upperLeft = upperLeft.translate(0, -(renderWidth / 30));
+                  renderCenter = renderCenter.translate(0, -(renderWidth / 30));
                 });
               }),
               child: const Icon(Icons.arrow_drop_up),
@@ -127,7 +127,7 @@ class _MandelExplorerState extends State<MandelExplorer> {
               mini: true,
               onPressed: (() {
                 setState(() {
-                  upperLeft = upperLeft.translate((renderWidth / 30), 0);
+                  renderCenter = renderCenter.translate((renderWidth / 30), 0);
                 });
               }),
               child: const Icon(Icons.arrow_right),
@@ -139,7 +139,7 @@ class _MandelExplorerState extends State<MandelExplorer> {
               mini: true,
               onPressed: (() {
                 setState(() {
-                  upperLeft = upperLeft.translate(-(renderWidth / 30), 0);
+                  renderCenter = renderCenter.translate(-(renderWidth / 30), 0);
                 });
               }),
               child: const Icon(Icons.arrow_left),
@@ -151,7 +151,7 @@ class _MandelExplorerState extends State<MandelExplorer> {
               mini: true,
               onPressed: (() {
                 setState(() {
-                  upperLeft = upperLeft.translate(0, (renderWidth / 30));
+                  renderCenter = renderCenter.translate(0, (renderWidth / 30));
                 });
               }),
               child: const Icon(Icons.arrow_drop_down),
@@ -163,9 +163,7 @@ class _MandelExplorerState extends State<MandelExplorer> {
               mini: true,
               onPressed: (() {
                 setState(() {
-                  renderWidth = renderWidth - (renderWidth / 30);
-                  upperLeft = upperLeft.translate(
-                      (renderWidth / 60), (renderWidth / 60));
+                  renderWidth *= 0.95;
                 });
               }),
               child: const Icon(Icons.zoom_in),
@@ -177,8 +175,7 @@ class _MandelExplorerState extends State<MandelExplorer> {
               mini: true,
               onPressed: (() {
                 setState(() {
-                  renderWidth = renderWidth + 0.1;
-                  upperLeft = upperLeft.translate(-0.05, -0.05);
+                  renderWidth /= 0.95;
                 });
               }),
               child: const Icon(Icons.zoom_out),

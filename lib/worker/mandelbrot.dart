@@ -10,9 +10,9 @@ part 'mandelbrot.worker.g.dart';
 
 @SquadronService(baseUrl: '/worker')
 class Mandelbrot extends WorkerService {
-  static const int maxIterations = 2000;
+  static const int maxIterations = 3000;
 
-  static List<List<int>> levelColors = [
+  static List<List<int>> palette = [
     [0, 0xff000435],
     [1, 0xff00086b], // dark blue background
     [2, 0xff0010d6],
@@ -27,8 +27,18 @@ class Mandelbrot extends WorkerService {
     [1400, 0xff00ff00], // green
     [1600, 0xffff0000], // red
     [1800, 0xffffff00], // yellow
-    [1900, 0xffffff00], // yellow
-    [2000, 0xff000000] // black
+    [maxIterations, 0xff000000] // black
+  ];
+
+  static List<List<int>> palette2 = [
+    [0, 0xff000435],
+    [2, 0xff0000ff], // blue
+    [400, 0xff00ffff], // yellow
+    [800, 0xff00ff00], // green
+    [1200, 0xffffff00], // cyan
+    [1600, 0xffff0000], // red
+    [2000, 0xff808080], // gray
+    [maxIterations, 0xff000000], // white
   ];
 
   static int iterations(double x0, double y0) {
@@ -72,8 +82,9 @@ class Mandelbrot extends WorkerService {
   }
 
   static int colorFromLevel(int level) {
-    // Interpolate control points in this.levelColors
-    // to map levels to colors.
+    final levelColors = palette;
+
+    // Interpolate control points in levelColors to map levels to colors.
     int iMin = 0;
     int iMax = levelColors.length;
     while (iMin < iMax - 1) {
@@ -98,8 +109,8 @@ class Mandelbrot extends WorkerService {
     var colMax = levelColors[iMax][1];
     var color = 0;
     for (var i = 0; i < 4; i++) {
-      final cMin = colMin >> i * 8 & 0xff;
-      final cMax = colMax >> i * 8 & 0xff;
+      final cMin = (colMin >> i * 8) & 0xff;
+      final cMax = (colMax >> i * 8) & 0xff;
       final value = (cMin + p * (cMax - cMin)).toInt();
       color += (value << i * 8);
     }
@@ -107,12 +118,7 @@ class Mandelbrot extends WorkerService {
     return color;
   }
 
-  static void delay() {
-    int i = 1000;
-    while (i > 0) {
-      i--;
-    }
-  }
+  static final _emptyBuffer = Uint8List(0).buffer;
 
   @SquadronMethod()
   Future<ByteBuffer> renderData(
@@ -137,10 +143,10 @@ class Mandelbrot extends WorkerService {
         // Yield every once in a while to allow for cancellation notifications
         // to pass through.
         await Future.delayed(Duration.zero);
-        if (clToken?.cancelled ?? false) {
+        if (clToken != null && clToken.cancelled) {
           Squadron.info(
               'Task cancelled during computation: iy = $iy / $bitmapHeight');
-          break;
+          return _emptyBuffer;
         }
       }
 
